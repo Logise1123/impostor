@@ -1,0 +1,1627 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>El Impostor (Rediseño)</title>
+    <!-- Carga de Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Importar fuente de Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        /* --- Paleta de Colores "Gamer" y Estilos Base --- */
+        :root {
+            --bg-primary: #111827; /* Azul-negro muy oscuro */
+            --bg-secondary: #1F2937; /* Azul-gris oscuro */
+            --bg-tertiary: #374151; /* Azul-gris medio */
+            --accent: #8B5CF6; /* Púrpura eléctrico */
+            --accent-hover: #7C3AED;
+            --text-primary: #F3F4F6; /* Blanco roto */
+            --text-secondary: #9CA3AF; /* Gris claro */
+            --danger: #EF4444; /* Rojo */
+            --danger-hover: #DC2626;
+            --success: #10B981; /* Verde */
+        }
+
+        body {
+            font-family: 'Space Grotesk', sans-serif;
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+        }
+        
+        /* Contenedor principal centrado */
+        .container {
+            max-width: 400px;
+            margin: 20px auto;
+            padding: 24px;
+            background-color: var(--bg-secondary);
+            border-radius: 16px; /* Más redondeado */
+            border: 1px solid var(--bg-tertiary);
+            box-shadow: 0 0 25px rgba(139, 92, 246, 0.1); /* Sombra púrpura sutil */
+        }
+        
+        /* --- Pantallas y Transiciones --- */
+        .screen {
+            display: none; /* Oculto por defecto */
+        }
+        .screen.active {
+            display: block; /* Visible cuando está activo */
+            animation: slideInUp 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        @keyframes slideInUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- NUEVO: Pantalla de Tutorial (Fullscreen) --- */
+        #tutorial-screen {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: #000;
+            z-index: 100;
+            display: none; /* Controlado por .active */
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+        }
+        #tutorial-screen video {
+            width: 100%;
+            max-height: 80vh;
+        }
+        #skip-tutorial-btn {
+            position: absolute;
+            bottom: 30px;
+            z-index: 101;
+            width: auto;
+            padding-left: 30px;
+            padding-right: 30px;
+        }
+        /* --- Fin Pantalla Tutorial --- */
+
+
+        /* --- Estilos de Componentes (Botones, Inputs) --- */
+        .btn {
+            display: inline-block;
+            width: 100%;
+            padding: 12px 20px;
+            font-size: 16px;
+            font-weight: 700; /* Más grueso */
+            text-align: center;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+            border: none;
+            text-transform: uppercase; /* Estilo de juego */
+            letter-spacing: 0.05em;
+        }
+        .btn-primary { background-color: var(--accent); color: white; }
+        .btn-primary:hover { background-color: var(--accent-hover); transform: scale(1.03); }
+        .btn-secondary { background-color: var(--bg-tertiary); color: var(--text-primary); }
+        .btn-secondary:hover { background-color: #4B5563; transform: scale(1.03); }
+        .btn-danger { background-color: var(--danger); color: white; }
+        .btn-danger:hover { background-color: var(--danger-hover); transform: scale(1.03); }
+        .btn:active { transform: scale(0.98); } /* Animación de click */
+        .btn:disabled { background-color: #444; color: #888; cursor: not-allowed; transform: scale(1); }
+        
+        .input {
+            width: 100%;
+            padding: 12px;
+            font-size: 16px;
+            border-radius: 8px;
+            border: 2px solid var(--bg-tertiary);
+            background-color: var(--bg-primary);
+            color: var(--text-primary);
+            margin-bottom: 12px;
+            transition: all 0.2s ease;
+        }
+        .input::placeholder { color: var(--text-secondary); }
+        .input:focus { 
+            border-color: var(--accent); 
+            outline: none;
+            box-shadow: 0 0 10px rgba(139, 92, 246, 0.5);
+        }
+
+        /* --- Pestañas de Auth --- */
+        .tab-btn {
+            flex: 1; padding: 10px; text-align: center; font-weight: 600;
+            cursor: pointer; background-color: var(--bg-primary); color: var(--text-secondary);
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s ease;
+        }
+        .tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; padding-top: 10px; }
+
+        /* --- Animaciones de Juego --- */
+        
+        /* Spinner de Carga */
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .spinner {
+            width: 40px; height: 40px;
+            margin: 0 auto;
+            border: 4px solid var(--bg-tertiary);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        /* Pulso brillante para el ID */
+        @keyframes pulseGlow {
+            0%, 100% { box-shadow: 0 0 5px var(--accent); transform: scale(1); }
+            50% { box-shadow: 0 0 20px var(--accent); transform: scale(1.02); }
+        }
+        .game-id-display {
+            font-size: 24px; font-weight: bold; text-align: center;
+            padding: 12px; background-color: var(--bg-primary); border-radius: 8px;
+            margin-bottom: 16px; color: var(--accent); letter-spacing: 3px;
+            transition: all 0.3s ease;
+        }
+        .game-id-display.glowing {
+            animation: pulseGlow 2s infinite;
+        }
+        
+        /* Revelación de Palabra Secreta */
+        @keyframes revealWord {
+            from { filter: blur(15px); opacity: 0; transform: scale(1.2); }
+            to { filter: blur(0); opacity: 1; transform: scale(1); }
+        }
+        .secret-word-reveal {
+            animation: revealWord 0.7s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+        .secret-word {
+            font-size: 28px; font-weight: 700; text-align: center;
+            padding: 20px; background-color: var(--bg-tertiary); border-radius: 8px;
+            margin-bottom: 16px;
+        }
+        /* --- MODO "IMPOSTOR CIEGO": Ambas son verdes --- */
+        .secret-word.impostor { color: var(--success); }
+        .secret-word.normal { color: var(--success); }
+
+        /* Pop-in para items de la lista */
+        @keyframes popIn {
+            from { opacity: 0; transform: scale(0.8); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .player-list-item {
+            background-color: var(--bg-tertiary);
+            padding: 12px 16px;
+            border-radius: 8px;
+            margin-bottom: 8px;
+            font-weight: 500;
+            animation: popIn 0.3s ease-out;
+            transition: all 0.2s ease;
+        }
+        .player-list-item:hover {
+            background-color: #4B5563;
+        }
+        
+        /* --- Estilos de Lista de Puntuación --- */
+        .score-list-item {
+            display: flex;
+            justify-content: space-between;
+            padding: 8px 12px;
+            border-radius: 6px;
+            background-color: var(--bg-tertiary);
+            margin-bottom: 6px;
+            animation: popIn 0.3s ease-out;
+        }
+        .score-list-item .name { font-weight: 600; }
+        .score-list-item .points { font-weight: 700; color: var(--accent); }
+
+
+        /* Estilos de Resultados */
+        @keyframes resultsPop {
+            from { transform: scale(0.5); opacity: 0; }
+            to { transform: scale(1); opacity: 1; }
+        }
+        #results-text {
+            animation: resultsPop 0.5s ease-out;
+            font-size: 1.5rem; /* 24px */
+            font-weight: 700;
+            padding: 1rem;
+            background-color: var(--bg-tertiary);
+            border-radius: 0.5rem;
+        }
+        #results-text.win { color: var(--success); }
+        #results-text.lose { color: var(--danger); }
+        
+        /* Modal de Notificación */
+        #notification-modal {
+            position: fixed; top: 20px; left: 50%;
+            transform: translateX(-50%);
+            padding: 12px 20px; border-radius: 8px;
+            z-index: 1000; box-shadow: 0 4px 10px rgba(0, 0, 0, 0.5);
+            display: none; font-weight: 600; animation: slideDown 0.5s;
+            font-size: 14px;
+        }
+        #notification-modal.success { background-color: var(--success); color: white; }
+        #notification-modal.error { background-color: var(--danger); color: white; }
+        
+        @keyframes slideDown {
+            from { top: -50px; opacity: 0; }
+            to { top: 20px; opacity: 1; }
+        }
+
+        /* --- Marcador (Simplificado) --- */
+        .scoreboard {
+            text-align: center; /* Simplificado */
+            background-color: var(--bg-primary);
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin-bottom: 16px;
+            border: 1px solid var(--bg-tertiary);
+        }
+        .score {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+        .score-round { color: var(--text-secondary); }
+    </style>
+</head>
+<body class="p-4">
+
+    <div class="container">
+
+        <!-- 0. Pantalla de Carga (Inicial) -->
+        <div id="loading-screen" class="screen active text-center p-8 space-y-4">
+            <div class="spinner"></div> <!-- SPINNER ANIMADO -->
+            <div class="text-lg font-semibold text-gray-400">Verificando sesión...</div>
+        </div>
+        
+        <!-- 1. Pantalla de Autenticación (Login / Registro) -->
+        <div id="auth-screen" class="screen">
+            <!-- Icono de Juego -->
+            <svg class="w-16 h-16 mx-auto mb-4 text-purple-400" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0ZM4.501 20.118a7.5 7.5 0 0 1 14.998 0A1.875 1.875 0 0 1 18 22.5H6a1.875 1.875 0 0 1-1.499-2.382Z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 12.75c-3.14 0-6.02.62-8.5 1.75c-.74.32-1.25.99-1.25 1.75v.01c0 .76.51 1.43 1.25 1.75c2.48 1.13 5.36 1.75 8.5 1.75c3.14 0 6.02-.62 8.5-1.75c.74-.32 1.25-.99 1.25-1.75v-.01c0-.76-.51-1.43-1.25-1.75c-2.48-1.13-5.36-1.75-8.5-1.75Z" clip-rule="evenodd" fill-rule="evenodd" fill="var(--accent)" opacity="0.3"/>
+            </svg>
+            <h1 class="text-3xl font-bold text-center mb-6">EL IMPOSTOR</h1>
+            
+            <div class="flex mb-4 rounded-lg overflow-hidden border border-gray-700">
+                <button id="tab-login" class="tab-btn active">Iniciar Sesión</button>
+                <button id="tab-register" class="tab-btn">Registrarse</button>
+            </div>
+            
+            <div id="login-content" class="tab-content active space-y-4">
+                <input type="text" id="login-username" class="input" placeholder="Nombre de Usuario">
+                <input type="password" id="login-password" class="input" placeholder="Contraseña">
+                <button id="login-btn" class="btn btn-primary">Entrar</button>
+            </div>
+            
+            <div id="register-content" class="tab-content space-y-4">
+                <input type="text" id="register-username" class="input" placeholder="Nombre de Usuario">
+                <input type="password" id="register-password" class="input" placeholder="Contraseña (mín. 6 caracteres)">
+                <button id="register-btn" class="btn btn-secondary">Crear Cuenta</button>
+            </div>
+        </div>
+
+        <!-- 2. Pantalla Principal (Home) -->
+        <div id="home-screen" class="screen space-y-4">
+            <h1 class="text-2xl font-bold text-center">¡Bienvenido!</h1>
+            <p class="text-center text-sm -mt-2" style="color: var(--text-secondary);">Conectado como:</p>
+            <p id="user-email-display" class="text-center text-sm mb-4" style="color: var(--accent);"></p>
+            
+            <div class="p-4 rounded-lg" style="background-color: var(--bg-primary);">
+                <p class="block text-sm font-medium mb-2" style="color: var(--text-secondary);">Tu Nombre en el Juego:</p>
+                <p id="ingame-name-display" class="text-xl font-bold text-white p-3 rounded-lg text-center" style="background-color: var(--bg-tertiary);">Cargando...</p>
+            </div>
+
+            <!-- Botón de Pantalla Completa -->
+            <button id="fullscreen-btn" class="btn btn-secondary !w-auto !py-2 !px-4 mx-auto !text-sm !mt-2">
+                Activar Pantalla Completa
+            </button>
+            
+            <button id="create-game-btn" class="btn btn-primary !mt-4">Crear Juego Nuevo</button>
+            
+            <div class="flex space-x-2">
+                <input type="text" id="join-game-id" class="input !mb-0" placeholder="ID (4 letras)" maxlength="4" style="text-transform: uppercase; letter-spacing: 2px; text-align: center; flex-grow: 1;">
+                <button id="join-game-btn" class="btn btn-secondary !w-auto">Unirse</button>
+            </div>
+
+            <button id="logout-btn" class="btn btn-danger !mt-8">Cerrar Sesión</button>
+        </div>
+
+        <!-- 3. Pantalla de Lobby (Sala de Espera) -->
+        <div id="lobby-screen" class="screen">
+            <h1 class="text-2xl font-bold text-center mb-4">Sala de Espera</h1>
+            <p class="text-center mb-2" style="color: var(--text-secondary);">ID del Juego:</p>
+            <div class="game-id-display" id="lobby-game-id">...</div> <!-- Se añadirá .glowing con JS -->
+            <p class="text-center mb-2" style="color: var(--text-secondary);">Jugadores:</p>
+            <div id="lobby-player-list" class="space-y-2 min-h-[100px] mb-4">
+                <!-- La lista de jugadores se insertará aquí -->
+            </div>
+            <button id="start-game-btn" class="btn btn-primary">¡Empezar Juego!</button>
+            <button id="leave-game-btn" class="btn btn-danger !mt-4">Salir del Lobby</button>
+        </div>
+
+        <!-- 4. Pantalla de Juego (Dar Pista) -->
+        <div id="game-screen" class="screen">
+            <!-- Marcador Simplificado -->
+            <div class="scoreboard">
+                <span class="score score-round">Ronda <span id="game-round">1</span> / 10</span>
+            </div>
+
+            <!-- Info del Turno -->
+            <div id="turn-info" class="text-center p-3 mb-2 rounded-lg" style="background-color: var(--bg-primary);">
+                <p class="text-sm" style="color: var(--text-secondary);">Turno de:</p>
+                <p id="turn-player-name" class="text-xl font-bold" style="color: var(--accent);">...</p>
+            </div>
+
+            <!-- Temporizador -->
+            <div class="w-full rounded-full h-2.5 mb-2" style="background-color: var(--bg-tertiary);">
+                <div id="timer-bar-fill" class="h-2.5 rounded-full" style="width: 100%; transition: width 0.25s linear; background-color: var(--accent);"></div>
+            </div>
+            <p id="timer-text" class="text-center text-sm text-gray-400 -mt-1 mb-4">30s</p>
+
+            <!-- Palabra Secreta Personal -->
+            <p class="text-center mb-2" style="color: var(--text-secondary);">Tu palabra secreta es:</p>
+            <div id="game-secret-word" class="secret-word">...</div>
+
+            <!-- Pistas dadas hasta ahora -->
+            <p class="text-center mt-4 mb-2" style="color: var(--text-secondary);">Pistas dadas:</p>
+            <div id="clues-given-list" class="space-y-2 min-h-[50px] mb-4 p-3 rounded-lg" style="background-color: var(--bg-primary);">
+                <!-- Pistas se añaden aquí -->
+            </div>
+
+            <!-- Sección para dar Pista (solo jugador activo) -->
+            <div id="clue-input-section" class="space-y-2" style="display: none;">
+                <input type="text" id="game-clue" class="input" placeholder="Tu pista (1 palabra)">
+                <button id="submit-clue-btn" class="btn btn-primary">Enviar Pista</button>
+            </div>
+            
+        </div>
+
+        <!-- 5. Pantalla de Votación -->
+        <div id="voting-screen" class="screen">
+            <!-- Marcador Simplificado -->
+            <div class="scoreboard">
+                <span class="score score-round">Ronda <span id="game-round-vote">1</span> / 10</span>
+            </div>
+            <h1 class="text-2xl font-bold text-center mb-4">¡A Votar!</h1>
+            <p class="text-center mb-4" style="color: var(--text-secondary);">¿Quién crees que es el impostor?</p>
+            <div id="voting-player-list" class="space-y-3 mb-4">
+                <!-- La lista de pistas y botones de voto se insertará aquí -->
+            </div>
+        </div>
+        
+        <!-- 6. Pantalla de Resultados -->
+        <div id="results-screen" class="screen">
+            <h1 class="text-2xl font-bold text-center mb-4">Resultados de la Ronda</h1>
+            <!-- Marcador Simplificado -->
+            <div class="scoreboard">
+                <span class="score score-round">Ronda <span id="game-round-res">1</span> / 10</span>
+            </div>
+            
+            <div id="results-text" class="text-center text-lg my-4 p-4 rounded-lg">...</div>
+            
+            <!-- Contenedor de Puntuaciones -->
+            <div id="results-score-list" class="text-left mb-4 p-3 rounded-lg" style="background-color: var(--bg-primary);">
+                <p class="font-bold text-sm mb-2 text-center">Puntuaciones</p>
+                <!-- La lista se inyectará aquí -->
+            </div>
+
+            <!-- Detalles de Votación -->
+            <div id="results-details" class="text-left mb-4 p-3 rounded-lg" style="color: var(--text-secondary); background-color: var(--bg-primary);">
+                <!-- Los detalles se inyectarán aquí -->
+            </div>
+
+            <button id="next-round-btn" class="btn btn-primary">Siguiente Ronda</button>
+            <button id="return-home-btn" class="btn btn-secondary !mt-4">Volver al Menú</button>
+        </div>
+
+        <!-- 7. Pantalla de Fin de Juego -->
+        <div id="game-over-screen" class="screen">
+            <h1 class="text-3xl font-bold text-center mb-4">¡Fin del Juego!</h1>
+            
+            <!-- Ganador -->
+            <div id="final-winner-text" class="text-center text-2xl mb-4 p-4 rounded-lg">...</div>
+
+            <!-- Contenedor de Puntuaciones Finales -->
+            <div id="final-score-list" class="text-left mb-6 p-3 rounded-lg" style="background-color: var(--bg-primary);">
+                <p class="font-bold text-lg mb-2 text-center">Puntuaciones Finales</p>
+                <!-- La lista se inyectará aquí -->
+            </div>
+            
+            <button id="play-again-btn" class="btn btn-primary">Jugar de Nuevo</button>
+            <button id="main-menu-btn" class="btn btn-secondary !mt-4">Volver al Menú</button>
+        </div>
+
+
+    </div>
+
+    <!-- --- NUEVO: Pantalla de Tutorial --- -->
+    <div id="tutorial-screen" class="screen fixed inset-0 bg-black z-[100] flex items-center justify-center flex-col">
+        <video id="tutorial-video" src="tuto.mp4" class="max-w-full max-h-[80vh]"></video>
+        <button id="skip-tutorial-btn" class="btn btn-secondary !absolute bottom-10 !w-auto !px-8">Saltar Tutorial</button>
+    </div>
+
+    <!-- Modal de Notificación -->
+    <div id="notification-modal"></div>
+
+    <!-- --- Efectos de Sonido --- -->
+    <audio id="sfx-basicbutton" src="sfx/basicbutton.mp3" preload="auto"></audio>
+    <audio id="sfx-multiselect" src="sfx/multiselect.mp3" preload="auto"></audio>
+    <audio id="sfx-createlobby" src="sfx/createlobby.mp3" preload="auto"></audio>
+    <audio id="sfx-reveal" src="sfx/reveal.mp3" preload="auto"></audio>
+    
+    <!-- Música de Fondo -->
+    <audio id="ambient-music" src="sfx/ambient.wav" loop preload="auto"></audio>
+    <!-- --- Fin Efectos de Sonido --- -->
+
+        <!-- SDKs de Firebase (Módulo) -->
+    <script type="module">
+        // Importar las funciones necesarias de Firebase
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { 
+            getAuth, 
+            onAuthStateChanged,
+            createUserWithEmailAndPassword,
+            signInWithEmailAndPassword,
+            signOut
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { 
+            getFirestore, doc, getDoc, setDoc, onSnapshot, 
+            collection, addDoc, updateDoc, deleteDoc, writeBatch,
+            query, getDocs, runTransaction, setLogLevel,
+            arrayUnion, serverTimestamp
+        } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // --- Configuración de Firebase ---
+        const firebaseConfig = {
+            apiKey: "AIzaSyBEcYYDjG__E9XpExZZFgyRL16iCRlo-3w",
+            authDomain: "weplay-6e002.firebaseapp.com",
+            projectId: "weplay-6e002",
+            storageBucket: "weplay-6e002.firebasestorage.app",
+            messagingSenderId: "244209416719",
+            appId: "1:244209416719:web:384cd821c3782bd792817a",
+            measurementId: "G-LJ81MEHYZH"
+        };
+            
+        const appId = firebaseConfig.appId || 'default-app-id';
+        
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        // setLogLevel('debug');
+
+        // --- Variables de Estado Globales ---
+        let currentUserId = null;
+        let currentGameId = null;
+        let currentUserIngameName = null;
+        let unsubscribeGame = null; 
+        let unsubscribePlayers = null; 
+        let isHost = false;
+        let playerCache = new Map(); 
+        let WORD_PAIRS = []; 
+        const MAX_ROUNDS = 10;
+        const TURN_TIME_SECONDS = 30; // <-- CAMBIO A 30 SEGUNDOS
+
+        // --- Variables de Temporizador ---
+        let latestGameData = {}; 
+        let gameTimerInterval = null; 
+        let visualTimerInterval = null; 
+        // --- Bloqueo de Votación ---
+        let isCalculatingVotes = false;
+        
+        // --- Control de Música ---
+        let musicFader = null;
+
+        // --- Referencias a Elementos del DOM ---
+        const screens = {
+            loading: document.getElementById('loading-screen'),
+            auth: document.getElementById('auth-screen'),
+            home: document.getElementById('home-screen'),
+            lobby: document.getElementById('lobby-screen'),
+            game: document.getElementById('game-screen'),
+            voting: document.getElementById('voting-screen'),
+            results: document.getElementById('results-screen'),
+            gameOver: document.getElementById('game-over-screen'),
+            tutorial: document.getElementById('tutorial-screen') 
+        };
+        const notificationModal = document.getElementById('notification-modal');
+        const userEmailDisplay = document.getElementById('user-email-display');
+        const fullscreenBtn = document.getElementById('fullscreen-btn'); 
+
+        // --- Funciones de Utilidad ---
+        
+        function showScreen(screenId) {
+            // Limpiar temporizadores visuales al cambiar de pantalla
+            if (visualTimerInterval) clearInterval(visualTimerInterval);
+            visualTimerInterval = null;
+            
+            // Ocultar todas las pantallas
+            Object.values(screens).forEach(screen => {
+                // La pantalla de tutorial es especial (fixed)
+                if (screen.id === 'tutorial-screen') {
+                    screen.style.display = 'none'; // Usar display en lugar de .active
+                } else {
+                    screen.classList.remove('active');
+                }
+            });
+
+            // Mostrar la pantalla solicitada
+            if (screens[screenId]) {
+                 if (screenId === 'tutorial') {
+                    screens[screenId].style.display = 'flex'; // Usar flex para centrar
+                } else {
+                    screens[screenId].classList.add('active');
+                }
+            }
+            
+            if (screenId === 'lobby') {
+                document.getElementById('lobby-game-id').classList.add('glowing');
+            } else {
+                document.getElementById('lobby-game-id').classList.remove('glowing');
+            }
+
+            if (screenId === 'results' || screenId === 'gameOver') {
+                playSound('sfx-reveal');
+            }
+        }
+
+        function showNotification(message, type = 'error') {
+            notificationModal.textContent = message;
+            notificationModal.className = type;
+            notificationModal.style.display = 'block';
+            setTimeout(() => {
+                notificationModal.style.display = 'none';
+            }, 3000);
+        }
+        
+        function setLoading(button, isLoading) {
+            if (button) {
+                if (isLoading && !button.dataset.originalText) {
+                    button.dataset.originalText = button.textContent;
+                }
+                button.disabled = isLoading;
+                button.textContent = isLoading ? 'Cargando...' : button.dataset.originalText || button.textContent;
+                if (!isLoading && button.dataset.originalText) {
+                    delete button.dataset.originalText;
+                }
+            }
+        }
+        
+        function generateGameId() {
+            return 'xxxx'.replace(/x/g, () => (Math.random() * 36 | 0).toString(36)).toUpperCase();
+        }
+
+        function playSound(soundId) {
+            try {
+                const sound = document.getElementById(soundId);
+                if (sound) {
+                    sound.currentTime = 0; 
+                    sound.play().catch(e => console.log("El usuario debe interactuar con la página para oír el sonido."));
+                }
+            } catch (error) {
+                console.error("Error al reproducir sonido:", soundId, error);
+            }
+        }
+        
+        // --- Funciones de Música ---
+        function playMusic() {
+            const music = document.getElementById('ambient-music');
+            if (music && music.paused) {
+                if (musicFader) clearInterval(musicFader); // Detener fade si estaba activo
+                music.volume = 0.5; // Empezar a volumen medio
+                music.play().catch(e => console.log("El usuario debe interactuar para oír música."));
+            }
+        }
+        
+        function fadeOutMusic() {
+            if (musicFader) clearInterval(musicFader); // Prevenir múltiples fades
+            const music = document.getElementById('ambient-music');
+            if (!music || music.paused) return;
+
+            musicFader = setInterval(() => {
+                if (music.volume > 0.01) {
+                    music.volume = Math.max(0, music.volume - 0.05);
+                } else {
+                    music.volume = 0;
+                    music.pause();
+                    clearInterval(musicFader);
+                    musicFader = null;
+                }
+            }, 100); // Fade out en ~2 segundos
+        }
+        
+        // --- Funciones Anti-Salida ---
+        
+        /** Activa/desactiva la pantalla completa */
+        function toggleFullScreen() {
+            playSound('sfx-basicbutton');
+            if (!document.fullscreenElement && !document.mozFullScreenElement && !document.webkitFullscreenElement) {
+                // Entrar en pantalla completa
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen();
+                } else if (document.documentElement.mozRequestFullScreen) { // Firefox
+                    document.documentElement.mozRequestFullScreen();
+                } else if (document.documentElement.webkitRequestFullscreen) { // Chrome, Safari, Opera
+                    document.documentElement.webkitRequestFullscreen(Element.ALLOW_KEYBOARD_INPUT);
+                }
+                fullscreenBtn.textContent = "Salir de Pantalla Completa";
+            } else {
+                // Salir de pantalla completa
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) { // Firefox
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) { // Chrome, Safari, Opera
+                    document.webkitExitFullscreen();
+                }
+                fullscreenBtn.textContent = "Activar Pantalla Completa";
+            }
+        }
+        // Asignar el evento al botón
+        fullscreenBtn.onclick = toggleFullScreen;
+        
+        /** Función de aviso al cerrar la pestaña */
+        const antiExitWarning = (e) => {
+            e.preventDefault();
+            e.returnValue = '¿Seguro que quieres salir? El juego se perderá.'; // Mensaje genérico (navegador lo personaliza)
+        };
+        
+
+        // --- Lógica de Pestañas (Auth) ---
+        const tabLogin = document.getElementById('tab-login');
+        const tabRegister = document.getElementById('tab-register');
+        const contentLogin = document.getElementById('login-content');
+        const contentRegister = document.getElementById('register-content');
+
+        tabLogin.onclick = () => {
+            playSound('sfx-basicbutton');
+            tabLogin.classList.add('active'); tabRegister.classList.remove('active');
+            contentLogin.classList.add('active'); contentRegister.classList.remove('active');
+        };
+        tabRegister.onclick = () => {
+            playSound('sfx-basicbutton');
+            tabRegister.classList.add('active'); tabLogin.classList.remove('active');
+            contentRegister.classList.add('active'); contentLogin.classList.remove('active');
+        };
+
+        // --- Lógica de Autenticación (Firebase Auth) ---
+
+        onAuthStateChanged(auth, async (user) => {
+            if (user && !user.isAnonymous) {
+                currentUserId = user.uid;
+                userEmailDisplay.textContent = user.email.split('@')[0];
+                await loadUserProfile(user.uid); 
+                showScreen('home');
+            } else {
+                currentUserId = null;
+                currentUserIngameName = null;
+                userEmailDisplay.textContent = '';
+                document.getElementById('ingame-name-display').textContent = '...';
+                showScreen('auth');
+            }
+        });
+
+        document.getElementById('register-btn').onclick = async (e) => {
+            playSound('sfx-basicbutton');
+            const username = document.getElementById('register-username').value.trim();
+            const password = document.getElementById('register-password').value;
+            
+            if (!username) {
+                return showNotification('Debes ingresar un nombre de usuario.', 'error');
+            }
+            if (password.length < 6) {
+                return showNotification('La contraseña debe tener al menos 6 caracteres.', 'error');
+            }
+            
+            const email = username + '@email.com'; // Email secreto
+            
+            const btn = e.target;
+            setLoading(btn, true);
+            try {
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                await setDoc(getUserProfileRef(userCredential.user.uid), { ingameName: username }, { merge: true });
+                currentUserIngameName = username; 
+            } catch (error) {
+                showNotification(getAuthErrorMessage(error.code), 'error');
+            } finally {
+                setLoading(btn, false);
+            }
+        };
+
+        document.getElementById('login-btn').onclick = async (e) => {
+            playSound('sfx-basicbutton');
+            const username = document.getElementById('login-username').value.trim();
+            const password = document.getElementById('login-password').value;
+
+            if (!username) {
+                return showNotification('Debes ingresar un nombre de usuario.', 'error');
+            }
+
+            const email = username + '@email.com'; // Email secreto
+            
+            const btn = e.target;
+            setLoading(btn, true);
+            try {
+                await signInWithEmailAndPassword(auth, email, password);
+            } catch (error) {
+                showNotification(getAuthErrorMessage(error.code), 'error');
+            } finally {
+                setLoading(btn, false);
+            }
+        };
+
+        document.getElementById('logout-btn').onclick = async () => {
+            playSound('sfx-basicbutton');
+            fadeOutMusic(); // Parar música al salir
+            await signOut(auth);
+        };
+
+        function getAuthErrorMessage(errorCode) {
+            switch (errorCode) {
+                case 'auth/invalid-email': return 'El nombre de usuario no es válido.';
+                case 'auth/user-not-found':
+                case 'auth/wrong-password':
+                case 'auth/invalid-credential': return 'Usuario o contraseña incorrectos.';
+                case 'auth/email-already-in-use': return 'Ese nombre de usuario ya está en uso.';
+                case 'auth/weak-password': return 'La contraseña es muy débil (mín. 6 caracteres).';
+                default: return 'Ha ocurrido un error. Intenta de nuevo.';
+            }
+        }
+        
+        // --- Lógica de Perfil (Firestore Privado) ---
+        
+        function getUserProfileRef(uid) {
+            return doc(db, 'artifacts', appId, 'users', uid, 'profile', 'data');
+        }
+
+        async function loadUserProfile(uid) {
+            if (!uid) return;
+            const ingameNameDisplay = document.getElementById('ingame-name-display');
+            try {
+                const docSnap = await getDoc(getUserProfileRef(uid));
+                if (docSnap.exists() && docSnap.data().ingameName) {
+                    currentUserIngameName = docSnap.data().ingameName;
+                    ingameNameDisplay.textContent = currentUserIngameName;
+                } else {
+                    const username = auth.currentUser.email.split('@')[0];
+                    currentUserIngameName = username;
+                    ingameNameDisplay.textContent = username;
+                    await setDoc(getUserProfileRef(uid), { ingameName: username }, { merge: true });
+                }
+            } catch (error) {
+                console.error('Error al cargar perfil:', error);
+                showNotification('Error al cargar tu perfil.', 'error');
+                document.getElementById('ingame-name-display').textContent = "Error";
+            }
+        }
+ 
+        // --- Lógica de Juego (Firestore Público) ---
+        
+        function getGameRef(gameId) {
+            return doc(db, 'artifacts', appId, 'public/data/impostorGames', gameId);
+        }
+        
+        function getPlayersRef(gameId) {
+            return collection(getGameRef(gameId), 'players');
+        }
+
+        document.getElementById('create-game-btn').onclick = async (e) => {
+            playSound('sfx-createlobby');
+            playMusic(); // <-- Iniciar música
+            if (WORD_PAIRS.length === 0) { 
+                return showNotification('Cargando palabras... Intenta de nuevo.', 'error');
+            }
+            if (!currentUserIngameName) {
+                return showNotification('Error: No se pudo cargar tu nombre de usuario.', 'error');
+            }
+            
+            const btn = e.target;
+            setLoading(btn, true);
+            
+            const gameId = generateGameId();
+            const gameRef = getGameRef(gameId);
+            
+            try {
+                await setDoc(gameRef, {
+                    hostId: currentUserId,
+                    state: 'lobby',
+                    round: 1
+                });
+                isHost = true;
+                await joinGame(gameId);
+            } catch (error) {
+                console.error('Error creando juego:', error);
+                showNotification('Error al crear el juego.', 'error');
+            } finally {
+                setLoading(btn, false);
+            }
+        };
+        
+        document.getElementById('join-game-btn').onclick = async (e) => {
+            playSound('sfx-basicbutton');
+            playMusic(); // <-- Iniciar música
+            if (!currentUserIngameName) {
+                return showNotification('Error: No se pudo cargar tu nombre de usuario.', 'error');
+            }
+            
+            const gameId = document.getElementById('join-game-id').value.toUpperCase();
+            if (gameId.length !== 4) {
+                return showNotification('El ID del juego debe tener 4 letras.', 'error');
+            }
+            
+            const btn = e.target;
+            setLoading(btn, true);
+            
+            try {
+                const gameDoc = await getDoc(getGameRef(gameId));
+                if (!gameDoc.exists() || gameDoc.data().state !== 'lobby') {
+                    showNotification('No se encontró la sala o ya está en juego.', 'error');
+                } else {
+                    isHost = false;
+                    await joinGame(gameId);
+                }
+            } catch (error) {
+                console.error('Error uniéndose al juego:', error);
+                showNotification('Error al unirse al juego.', 'error');
+            } finally {
+                setLoading(btn, false);
+            }
+        };
+        
+        async function joinGame(gameId) {
+            currentGameId = gameId;
+            const playerRef = doc(getPlayersRef(gameId), currentUserId);
+            
+            await setDoc(playerRef, {
+                name: currentUserIngameName,
+                isImpostor: false,
+                word: '',
+                clue: '',
+                votedFor: '',
+                votesReceived: 0,
+                score: 0,
+                hasSkippedTutorial: false 
+            });
+            
+            listenToGame(gameId);
+        }
+        
+        function listenToGame(gameId) {
+            if (unsubscribeGame) unsubscribeGame();
+            if (unsubscribePlayers) unsubscribePlayers();
+
+            if (isHost) {
+                if (gameTimerInterval) clearInterval(gameTimerInterval);
+                gameTimerInterval = setInterval(() => {
+                    checkGameTimer(latestGameData); 
+                }, 1000); 
+            }
+            
+            // Activar aviso anti-salida
+            window.onbeforeunload = antiExitWarning;
+
+            const gameRef = getGameRef(gameId);
+            
+            unsubscribeGame = onSnapshot(gameRef, (docSnap) => {
+                if (!docSnap.exists()) {
+                    showNotification('El host ha cerrado el juego.', 'error');
+                    returnToHome();
+                    return;
+                }
+                
+                const gameData = docSnap.data();
+                const oldGameData = latestGameData; 
+                latestGameData = gameData; 
+                
+                updateAllScoreboards(gameData);
+                
+                document.getElementById('lobby-game-id').textContent = gameId;
+                document.getElementById('start-game-btn').style.display = (isHost && gameData.state === 'lobby') ? 'block' : 'none';
+                
+                switch (gameData.state) {
+                    case 'lobby': 
+                        showScreen('lobby'); 
+                        break;
+                    case 'tutorial': 
+                        fadeOutMusic(); // Apagar música
+                        showScreen('tutorial');
+                        playTutorial();
+                        break;
+                    case 'clue-giving':
+                        fadeOutMusic(); // Apagar música (por si acaso)
+                        showScreen('game'); 
+                        updateGameScreenUI(gameData); 
+                        break;
+                    case 'voting': 
+                        showScreen('voting'); 
+                        updateVotingScreenUI(gameData);
+                        break;
+                    case 'results':
+                        showScreen('results'); 
+                        displayResults(gameData);
+                        break;
+                    case 'game-over':
+                        showScreen('gameOver'); 
+                        displayGameOver(gameData);
+                        break;
+                }
+                
+                if (isHost) {
+                    checkTurnAdvancement(gameData, oldGameData);
+                }
+            });
+
+            unsubscribePlayers = onSnapshot(getPlayersRef(gameId), (querySnapshot) => {
+                playerCache.clear();
+                let players = [];
+                querySnapshot.forEach(doc => {
+                    const playerData = { id: doc.id, ...doc.data() };
+                    players.push(playerData);
+                    playerCache.set(doc.id, playerData); 
+                });
+                
+                updateLobbyList(players); 
+                
+                const gameScreen = document.getElementById('game-screen');
+                if (gameScreen.classList.contains('active')) {
+                    getDoc(gameRef).then(doc => updateGameScreenUI(doc.data()));
+                }
+
+                if (isHost) {
+                    const gameData = latestGameData; // Usar el caché global
+                    if (gameData.state === 'tutorial' && players.length > 0) {
+                        const allSkipped = players.every(p => p.hasSkippedTutorial);
+                        if (allSkipped) {
+                            console.log("Host: Todos han saltado. Empezando juego...");
+                            const allPlayersData = Array.from(playerCache.values());
+                            startNewRound(allPlayersData); // Esto pone el estado en 'clue-giving'
+                        }
+                    }
+                    
+                    checkAllPlayersVoted(players); // Comprobar votos
+                }
+            });
+        }
+        
+        function updateAllScoreboards(gameData) {
+            const round = gameData.round || 1;
+            ['game-round', 'game-round-vote', 'game-round-res'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) el.textContent = round;
+            });
+        }
+        
+        function updateLobbyList(players) {
+            const lobbyPlayerList = document.getElementById('lobby-player-list');
+            lobbyPlayerList.innerHTML = '';
+            
+            players.forEach(player => {
+                const lobbyItem = document.createElement('div');
+                lobbyItem.className = 'player-list-item';
+                lobbyItem.textContent = player.name + (player.id === currentUserId ? ' (Tú)' : '');
+                lobbyPlayerList.appendChild(lobbyItem);
+            });
+        }
+
+        function updateGameScreenUI(gameData) {
+            if (!playerCache.size || !gameData.playerOrder) return; 
+
+            const myData = playerCache.get(currentUserId);
+            if (!myData) return; 
+
+            const wordDiv = document.getElementById('game-secret-word');
+            const newWord = myData.word || '...';
+            if (wordDiv.textContent !== newWord && newWord !== '...') {
+                wordDiv.textContent = newWord;
+                wordDiv.className = `secret-word ${myData.isImpostor ? 'impostor' : 'normal'}`; // Ambas verdes
+                wordDiv.classList.add('secret-word-reveal');
+                setTimeout(() => wordDiv.classList.remove('secret-word-reveal'), 700);
+            } else if (wordDiv.textContent === '...') {
+                 wordDiv.textContent = newWord; 
+                 wordDiv.className = `secret-word ${myData.isImpostor ? 'impostor' : 'normal'}`;
+            }
+
+            const turnIndex = gameData.currentPlayerTurnIndex;
+            const activePlayerId = gameData.playerOrder[turnIndex];
+            const activePlayer = playerCache.get(activePlayerId);
+            document.getElementById('turn-player-name').textContent = activePlayer ? activePlayer.name : '...';
+
+            const cluesList = document.getElementById('clues-given-list');
+            cluesList.innerHTML = '';
+            const clues = gameData.clues || {};
+            gameData.playerOrder.forEach(playerId => {
+                const clue = clues[playerId];
+                if (clue) { 
+                    const player = playerCache.get(playerId);
+                    if (player) {
+                        const clueItem = document.createElement('div');
+                        clueItem.className = 'text-sm text-gray-400 italic';
+                        clueItem.textContent = `${player.name}: "${clue}"`;
+                        cluesList.appendChild(clueItem);
+                    }
+                }
+            });
+
+
+            // Actualizar Timer Visual (FIXED)
+            if (visualTimerInterval) clearInterval(visualTimerInterval); 
+            const timerBar = document.getElementById('timer-bar-fill');
+            const timerText = document.getElementById('timer-text');
+            const startTime = gameData.turnStartTime || Date.now();
+            
+            visualTimerInterval = setInterval(() => {
+                const elapsed = (Date.now() - (startTime.seconds ? startTime.toMillis() : startTime)) / 1000;
+                const remaining = Math.max(0, TURN_TIME_SECONDS - elapsed);
+                const percentage = (remaining / TURN_TIME_SECONDS) * 100;
+                
+                if (timerText) timerText.textContent = `${Math.ceil(remaining)}s`;
+                if (timerBar) timerBar.style.width = `${percentage}%`;
+
+                if (remaining <= 0) {
+                    if (visualTimerInterval) clearInterval(visualTimerInterval);
+                }
+            }, 250); 
+
+
+            const clueInputSection = document.getElementById('clue-input-section');
+            const submitClueBtn = document.getElementById('submit-clue-btn');
+            const gameClueInput = document.getElementById('game-clue'); // <-- Referencia a la textbox
+            
+            if (currentUserId === activePlayerId) {
+                clueInputSection.style.display = 'block';
+                const iHaveGivenClue = !!clues[currentUserId];
+                
+                // --- VACIAR TEXTBOX ---
+                if (!iHaveGivenClue && gameClueInput.value !== "") {
+                    gameClueInput.value = ""; // <-- VACIAR
+                }
+                // --- FIN ---
+
+                submitClueBtn.disabled = iHaveGivenClue;
+                gameClueInput.disabled = iHaveGivenClue;
+                if(iHaveGivenClue) submitClueBtn.textContent = "Pista enviada";
+
+            } else {
+                clueInputSection.style.display = 'none';
+            }
+        }
+        
+        function updateVotingScreenUI(gameData) {
+            const votingList = document.getElementById('voting-player-list');
+            votingList.innerHTML = '';
+            
+            const clues = gameData.clues || {};
+            const myData = playerCache.get(currentUserId);
+            const iHaveVoted = !!(myData && myData.votedFor);
+
+            playerCache.forEach(player => {
+                const votingItem = document.createElement('div');
+                votingItem.className = 'player-list-item flex justify-between items-center';
+                
+                const textSpan = document.createElement('span');
+                const playerClue = clues[player.id] || '???';
+                textSpan.innerHTML = `<span class="font-semibold">${player.name}:</span> <span class="italic" style="color: var(--text-secondary);">"${playerClue}"</span>`;
+                votingItem.appendChild(textSpan);
+                
+                const voteButton = document.createElement('button');
+                voteButton.className = 'btn btn-danger !w-auto !py-2 !px-4 ml-4 !text-sm';
+                voteButton.textContent = 'Votar';
+                voteButton.onclick = () => voteForPlayer(player.id);
+                
+                if (player.id === currentUserId || iHaveVoted) {
+                    voteButton.disabled = true;
+                    if (myData && myData.votedFor === player.id) {
+                        voteButton.textContent = 'Votado';
+                        voteButton.classList.replace('btn-danger', 'btn-secondary');
+                    }
+                }
+                
+                votingItem.appendChild(voteButton);
+                votingList.appendChild(votingItem);
+            });
+        }
+        
+        // --- Lógica del Host ---
+        
+        document.getElementById('start-game-btn').onclick = async () => {
+            playSound('sfx-createlobby'); 
+            fadeOutMusic(); // <-- Host apaga su música
+            if (WORD_PAIRS.length === 0) { 
+                return showNotification('Cargando palabras... Intenta de nuevo.', 'error');
+            }
+            const playersQuery = await getDocs(getPlayersRef(currentGameId));
+            const players = [];
+            playersQuery.forEach(doc => players.push({ id: doc.id, ...doc.data() }));
+
+            if (players.length < 3) {
+                return showNotification('Se necesitan al menos 3 jugadores para empezar.');
+            }
+            
+            // --- LÓGICA CAMBIADA ---
+            // Ya no empieza el juego, solo activa el tutorial
+            const gameRef = getGameRef(currentGameId);
+            await updateDoc(gameRef, { state: 'tutorial' });
+            // El listener de 'players' (onSnapshot) se encargará de
+            // detectar cuándo todos han saltado y llamar a startNewRound()
+        };
+        
+        async function startNewRound(players) {
+            const impostorIndex = Math.floor(Math.random() * players.length);
+            const impostorId = players[impostorIndex].id;
+            
+            const gameRef = getGameRef(currentGameId);
+            const batch = writeBatch(db);
+
+            const pairIndex = Math.floor(Math.random() * WORD_PAIRS.length);
+            const [innocentWord, impostorWord] = WORD_PAIRS[pairIndex];
+            
+            const gameData = (await getDoc(gameRef)).data();
+            let playerOrder;
+
+            if (gameData.round === 1 || !gameData.playerOrder) {
+                const playerIds = players.map(p => p.id);
+                playerOrder = playerIds.sort(() => 0.5 - Math.random());
+            } else {
+                playerOrder = [...gameData.playerOrder];
+                playerOrder.push(playerOrder.shift()); // Mover el primero al final
+            }
+            
+            players.forEach((player, index) => {
+                const playerRef = doc(getPlayersRef(currentGameId), player.id);
+                const isImpostor = player.id === impostorId;
+                batch.update(playerRef, {
+                    isImpostor: isImpostor,
+                    word: isImpostor ? impostorWord : innocentWord,
+                    clue: '',
+                    votedFor: '',
+                    votesReceived: 0,
+                    hasSkippedTutorial: false // Resetear para 'Jugar de Nuevo'
+                });
+            });
+            
+            batch.update(gameRef, {
+                state: 'clue-giving',
+                impostorId: impostorId,
+                innocentWord: innocentWord, 
+                impostorWord: impostorWord, 
+                round: gameData.round || 1,
+                playerOrder: playerOrder, 
+                currentPlayerTurnIndex: 0,
+                clues: {}, 
+                turnStartTime: serverTimestamp(),
+                scoresSnapshot: null // Limpiar snapshot anterior
+            });
+            
+            await batch.commit();
+        }
+        
+        // --- Lógica de Jugador (Juego) ---
+        
+        document.getElementById('submit-clue-btn').onclick = async (e) => {
+            playSound('sfx-basicbutton');
+            const clue = document.getElementById('game-clue').value.trim();
+            if (!clue) {
+                return showNotification('Debes escribir una pista.', 'error');
+            }
+            
+            const btn = e.target;
+            setLoading(btn, true); 
+            
+            const gameRef = getGameRef(currentGameId);
+            try {
+                const clueField = `clues.${currentUserId}`;
+                await updateDoc(gameRef, { 
+                    [clueField]: clue
+                });
+            } catch (error) {
+                showNotification('Error al enviar pista.', 'error');
+                setLoading(btn, false); 
+            }
+        };
+
+        async function checkTurnAdvancement(gameData, oldGameData) {
+            if (!isHost || gameData.state !== 'clue-giving' || !gameData.playerOrder) return;
+            
+            const turnIndex = gameData.currentPlayerTurnIndex;
+            const activePlayerId = gameData.playerOrder[turnIndex];
+            
+            const newClues = gameData.clues || {};
+            const oldClues = oldGameData ? (oldGameData.clues || {}) : {};
+
+            if (newClues[activePlayerId] && !oldClues[activePlayerId]) {
+                await advanceTurn(gameData);
+            }
+        }
+
+        async function advanceTurn(gameData) {
+            if (!isHost) return;
+            
+            const gameRef = getGameRef(currentGameId);
+            const nextTurnIndex = gameData.currentPlayerTurnIndex + 1;
+
+            if (nextTurnIndex >= gameData.playerOrder.length) {
+                await updateDoc(gameRef, { 
+                    state: 'voting'
+                });
+            } else {
+                await updateDoc(gameRef, { 
+                    currentPlayerTurnIndex: nextTurnIndex,
+                    turnStartTime: serverTimestamp() 
+                });
+            }
+        }
+        
+        async function checkGameTimer(gameData) {
+            if (!isHost || gameData.state !== 'clue-giving' || !gameData.playerOrder) return;
+            
+            const startTime = gameData.turnStartTime ? (gameData.turnStartTime.seconds ? gameData.turnStartTime.toMillis() : 0) : 0;
+            if (startTime === 0) return; 
+            
+            const elapsed = (Date.now() - startTime) / 1000;
+            
+            if (elapsed > TURN_TIME_SECONDS) {
+                const turnIndex = gameData.currentPlayerTurnIndex;
+                const activePlayerId = gameData.playerOrder[turnIndex];
+                const clues = gameData.clues || {};
+
+                if (!clues[activePlayerId]) {
+                    console.log(`Tiempo fuera para ${activePlayerId}. Avanzando...`);
+                    const gameRef = getGameRef(currentGameId);
+                    const clueField = `clues.${activePlayerId}`;
+                    await updateDoc(gameRef, { 
+                        [clueField]: "..." 
+                    });
+                }
+            }
+        }
+
+
+        async function voteForPlayer(playerId) {
+            playSound('sfx-multiselect'); 
+            document.querySelectorAll('#voting-player-list button').forEach(btn => btn.disabled = true);
+            
+            const playerDocRef = doc(getPlayersRef(currentGameId), currentUserId);
+            await updateDoc(playerDocRef, { votedFor: playerId });
+            
+            const votedPlayerDocRef = doc(getPlayersRef(currentGameId), playerId);
+            try {
+                await runTransaction(db, async (transaction) => {
+                    const playerDoc = await transaction.get(votedPlayerDocRef);
+                    if (!playerDoc.exists()) { throw "Document does not exist!"; }
+                    const newVotes = (playerDoc.data().votesReceived || 0) + 1;
+                    transaction.update(votedPlayerDocRef, { votesReceived: newVotes });
+                });
+            } catch (e) {
+                console.error("Transacción de voto fallida: ", e);
+            }
+        }
+        
+        // --- FUNCIÓN REFACTORIZADA (con bloqueo) ---
+        async function checkAllPlayersVoted(players) {
+            if (!isHost || isCalculatingVotes || players.length === 0) return; 
+            
+            const gameRef = getGameRef(currentGameId);
+            const docSnap = await getDoc(gameRef);
+            
+            if (!docSnap || !docSnap.data() || docSnap.data().state !== 'voting') return;
+
+            const allVoted = players.every(p => p.votedFor !== '');
+            if (allVoted) {
+                isCalculatingVotes = true; 
+                
+                let mostVotedPlayer = null;
+                let maxVotes = -1;
+                players.forEach(p => {
+                    if (p.votesReceived > maxVotes) {
+                        maxVotes = p.votesReceived;
+                        mostVotedPlayer = p;
+                    }
+                });
+                
+                if (!mostVotedPlayer) mostVotedPlayer = players[0]; 
+
+                // --- Lógica de Puntos (Individual/Punitiva) ---
+                const gameData = docSnap.data();
+                const impostorWasDiscovered = mostVotedPlayer.isImpostor;
+                const impostorId = gameData.impostorId;
+                
+                const batch = writeBatch(db);
+                const scoresSnapshot = {}; 
+
+                players.forEach(player => {
+                    const playerRef = doc(getPlayersRef(currentGameId), player.id);
+                    let currentScore = player.score || 0; 
+                    let newScore = currentScore; 
+                    
+                    if (impostorWasDiscovered) {
+                        if (player.id === impostorId) {
+                            newScore--; // Impostor pierde 1
+                        } else {
+                            newScore++; // Innocents ganan 1
+                        }
+                    } else {
+                        if (player.id === impostorId) {
+                            newScore++; // Impostor gana 1
+                        }
+                    }
+                    
+                    batch.update(playerRef, { score: newScore }); // Actualizar en DB
+                    scoresSnapshot[player.id] = { name: player.name, score: newScore, isImpostor: player.id === impostorId };
+                });
+
+                batch.update(gameRef, {
+                    state: 'results',
+                    votedOutPlayerId: mostVotedPlayer.id,
+                    impostorWasDiscovered: impostorWasDiscovered,
+                    scoresSnapshot: scoresSnapshot // Guardar el snapshot
+                });
+                
+                await batch.commit();
+                isCalculatingVotes = false; 
+            }
+        }
+        
+        // --- Resultados y Siguiente Ronda ---
+        
+        async function displayResults(gameData) {
+            const resultsText = document.getElementById('results-text');
+            const resultsDetails = document.getElementById('results-details');
+            const resultsScoreList = document.getElementById('results-score-list');
+            
+            try {
+                const impostor = playerCache.get(gameData.impostorId);
+                const votedOut = playerCache.get(gameData.votedOutPlayerId);
+                
+                if (!impostor || !votedOut) throw new Error("Datos de jugador no encontrados");
+                
+                if (gameData.impostorWasDiscovered) {
+                    resultsText.textContent = `¡El impostor (${votedOut.name}) fue descubierto!`;
+                    resultsText.className = 'text-center text-lg my-4 p-4 rounded-lg results-text win'; 
+                } else {
+                    resultsText.textContent = `¡El impostor (${impostor.name}) ha escapado!`;
+                    resultsText.className = 'text-center text-lg my-4 p-4 rounded-lg results-text lose'; 
+                }
+                
+                // Mostrar Votos
+                let mainText = `Votaron a ${votedOut.name}. El impostor (${impostor.name}) tenía "${gameData.impostorWord}". Los inocentes tenían "${gameData.innocentWord}".`;
+                
+                let voteListHTML = '<div class="mt-4 text-xs text-left space-y-1 border-t border-gray-700 pt-2">';
+                voteListHTML += '<p class="font-bold text-sm mb-1">Resumen de Votos:</p>';
+                playerCache.forEach(player => {
+                    const voteTarget = playerCache.get(player.votedFor);
+                    const targetName = voteTarget ? voteTarget.name : 'Nadie';
+                    voteListHTML += `<div><strong style="color:var(--text-primary);">${player.name}</strong> votó por <strong style="color:var(--text-primary);">${targetName}</strong></div>`;
+                });
+                voteListHTML += '</div>';
+                
+                resultsDetails.innerHTML = mainText + voteListHTML;
+
+                // Mostrar Puntuaciones desde el SNAPSHOT
+                resultsScoreList.innerHTML = '<p class="font-bold text-sm mb-2 text-center">Puntuaciones</p>';
+                
+                if (gameData.scoresSnapshot) {
+                    const playersArray = Object.values(gameData.scoresSnapshot);
+                    playersArray.sort((a, b) => (b.score || 0) - (a.score || 0)); 
+
+                    playersArray.forEach(player => {
+                        const scoreItem = document.createElement('div');
+                        scoreItem.className = 'score-list-item';
+                        scoreItem.innerHTML = `
+                            <span class="name">${player.name} ${player.isImpostor ? '🕵️' : ''}</span>
+                            <span class="points">${player.score || 0} pts</span>
+                        `;
+                        resultsScoreList.appendChild(scoreItem);
+                    });
+                } else {
+                     resultsScoreList.innerHTML = '<p class="text-center text-sm text-gray-500">Calculando puntos...</p>';
+                }
+
+
+            } catch (error) {
+                console.error("Error displaying results:", error);
+                resultsText.textContent = "Error al calcular resultados.";
+                resultsText.className = 'text-center text-lg my-4 p-4 rounded-lg results-text lose';
+            }
+            
+            document.getElementById('next-round-btn').style.display = isHost ? 'block' : 'none';
+        }
+        
+        document.getElementById('next-round-btn').onclick = async () => {
+            playSound('sfx-basicbutton');
+            const gameRef = getGameRef(currentGameId);
+            const gameDoc = (await getDoc(gameRef)).data();
+
+            if (gameDoc.round >= MAX_ROUNDS) {
+                await updateDoc(gameRef, { state: 'game-over' });
+            } else {
+                await updateDoc(gameRef, { round: gameDoc.round + 1 });
+                
+                const players = Array.from(playerCache.values());
+                await startNewRound(players);
+                
+                const clueBtn = document.getElementById('submit-clue-btn');
+                setLoading(clueBtn, false);
+                clueBtn.dataset.originalText = "Enviar Pista";
+                clueBtn.textContent = "Enviar Pista";
+                document.getElementById('game-clue').value = "";
+                document.getElementById('game-clue').disabled = false;
+            }
+        };
+
+        // --- Fin del Juego y Reinicio ---
+        function displayGameOver(gameData) {
+            // Desactivar aviso anti-salida
+            window.onbeforeunload = null;
+
+            const finalScoreList = document.getElementById('final-score-list'); 
+            const winnerText = document.getElementById('final-winner-text'); 
+            
+            finalScoreList.innerHTML = '<p class="font-bold text-lg mb-2 text-center">Puntuaciones Finales</p>';
+            const playersArray = Array.from(playerCache.values());
+            playersArray.sort((a, b) => (b.score || 0) - (a.score || 0)); 
+
+            let winners = [];
+            let maxScore = -Infinity;
+            
+            if (playersArray.length > 0) {
+                maxScore = playersArray[0].score || 0;
+                winners = playersArray.filter(p => (p.score || 0) === maxScore);
+            }
+
+            playersArray.forEach(player => {
+                const scoreItem = document.createElement('div');
+                scoreItem.className = 'score-list-item';
+                const isWinner = winners.some(w => w.id === player.id);
+                scoreItem.innerHTML = `
+                    <span class="name">${isWinner ? '🏆' : ''} ${player.name}</span>
+                    <span class="points">${player.score || 0} pts</span>
+                `;
+                if (isWinner) {
+                    scoreItem.style.backgroundColor = 'var(--accent)';
+                    scoreItem.style.color = 'white';
+                }
+                finalScoreList.appendChild(scoreItem);
+            });
+
+            // Declarar ganador(es)
+            if (winners.length === 1) {
+                winnerText.textContent = `¡El ganador es ${winners[0].name}!`;
+                winnerText.className = "text-center text-2xl mb-4 p-4 rounded-lg results-text win";
+            } else if (winners.length > 1) {
+                winnerText.textContent = "¡Es un EMPATE!";
+                winnerText.className = "text-center text-2xl mb-4 p-4 rounded-lg";
+                winnerText.style.color = "var(--text-secondary)";
+            } else {
+                winnerText.textContent = "¡Fin del juego!";
+                winnerText.className = "text-center text-2xl mb-4 p-4 rounded-lg";
+            }
+
+            document.getElementById('play-again-btn').style.display = isHost ? 'block' : 'none';
+        }
+
+        document.getElementById('play-again-btn').onclick = async () => {
+            playSound('sfx-createlobby');
+            playMusic(); // <-- Reiniciar música
+            const gameRef = getGameRef(currentGameId);
+            
+            const batch = writeBatch(db);
+            playerCache.forEach(player => {
+                const playerRef = doc(getPlayersRef(currentGameId), player.id);
+                batch.update(playerRef, { score: 0 }); // Reset score
+            });
+            
+            batch.update(gameRef, {
+                state: 'lobby',
+                round: 1
+            });
+            
+            await batch.commit();
+        };
+        
+        document.getElementById('main-menu-btn').onclick = returnToHome;
+
+        // --- Salir y Limpiar ---
+        
+        document.getElementById('leave-game-btn').onclick = returnToHome;
+        document.getElementById('return-home-btn').onclick = returnToHome;
+        
+        async function returnToHome() {
+            playSound('sfx-basicbutton');
+            fadeOutMusic(); // <-- Parar música
+            
+            // Desactivar aviso anti-salida
+            window.onbeforeunload = null;
+            
+            // Limpiar temporizadores
+            if (gameTimerInterval) clearInterval(gameTimerInterval);
+            if (visualTimerInterval) clearInterval(visualTimerInterval);
+            gameTimerInterval = null;
+            visualTimerInterval = null;
+
+            if (currentGameId && currentUserId) {
+                const playerRef = doc(getPlayersRef(currentGameId), currentUserId);
+                await deleteDoc(playerRef);
+                
+                if (isHost) {
+                    const playersQuery = await getDocs(getPlayersRef(currentGameId));
+                    const batch = writeBatch(db);
+                    playersQuery.forEach(doc => batch.delete(doc.ref));
+                    batch.delete(getGameRef(currentGameId));
+                    await batch.commit();
+                }
+            }
+            
+            if (unsubscribeGame) unsubscribeGame();
+            if (unsubscribePlayers) unsubscribePlayers();
+            
+            currentGameId = null;
+            isHost = false;
+            unsubscribeGame = null;
+            unsubscribePlayers = null;
+            playerCache.clear();
+            
+            showScreen('home');
+        }
+
+        // --- Cargar la lista de palabras ---
+        async function loadWordList() {
+            try {
+                const response = await fetch('wordlist.txt');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const text = await response.text();
+                WORD_PAIRS = JSON.parse(text);
+                console.log('Wordlist cargada:', WORD_PAIRS.length, 'pares');
+            } catch (error) {
+                console.error('Error al cargar wordlist.txt:', error);
+                showNotification('Error fatal: No se pudo cargar la lista de palabras. Usando palabras de emergencia.', 'error');
+                WORD_PAIRS = [["Sandía", "Pelota"], ["Pis", "Agua"], ["Caca", "Barro"]];
+            }
+        }
+        
+        loadWordList();
+
+        // --- Lógica del Tutorial ---
+        const skipTutorialBtn = document.getElementById('skip-tutorial-btn');
+        const tutorialVideo = document.getElementById('tutorial-video');
+
+        function playTutorial() {
+            // Resetear el botón
+            skipTutorialBtn.disabled = false;
+            skipTutorialBtn.textContent = "Saltar Tutorial";
+            
+            // Iniciar vídeo
+            tutorialVideo.currentTime = 0;
+            tutorialVideo.play().catch(e => {
+                console.warn("El vídeo no pudo autocompletarse, el usuario debe hacer clic.");
+                if (!skipTutorialBtn.disabled) { 
+                    showNotification("Haz clic en la pantalla para reproducir el vídeo", "success");
+                }
+            });
+        }
+        
+        skipTutorialBtn.onclick = async () => {
+            playSound('sfx-basicbutton');
+            skipTutorialBtn.disabled = true;
+            skipTutorialBtn.textContent = "Esperando a los demás...";
+            tutorialVideo.pause(); // Pausar vídeo
+            
+            // Avisar a Firestore que he saltado
+            const playerRef = doc(getPlayersRef(currentGameId), currentUserId);
+            await setDoc(playerRef, { hasSkippedTutorial: true }, { merge: true });
+            // El host detectará esto.
+        };
+
+        tutorialVideo.onended = () => {
+            // "Saltar" automáticamente cuando el vídeo termina
+            if (!skipTutorialBtn.disabled) {
+                skipTutorialBtn.click();
+            }
+        };
+        // --- Fin de la Lógica del Tutorial ---
+
+    </script>
+</body>
+</html>
